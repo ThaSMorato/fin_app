@@ -1,0 +1,94 @@
+import faker from "faker";
+import { AppError } from "../../../../shared/errors/AppError";
+
+import { InMemoryUsersRepository } from "../../../users/repositories/in-memory/InMemoryUsersRepository";
+import { InMemoryStatementsRepository } from "../../repositories/in-memory/InMemoryStatementsRepository";
+import { GetStatementOperationUseCase } from "./GetStatementOperationUseCase";
+
+enum OperationType {
+  DEPOSIT = "deposit",
+  WITHDRAW = "withdraw",
+}
+
+let usersRepository: InMemoryUsersRepository;
+let statementsRepository: InMemoryStatementsRepository;
+let getStatementOperationUseCase: GetStatementOperationUseCase;
+
+const user = {
+  email: faker.internet.email(),
+  name: faker.name.firstName(),
+  password: faker.internet.password(),
+  id: "",
+};
+
+const first_statement = {
+  amount: 900,
+  description: "Initial transaction",
+  type: OperationType.DEPOSIT,
+  user_id: "",
+  id: "",
+};
+
+describe("#GetStatementOperationUseCase", () => {
+  beforeEach(async () => {
+    usersRepository = new InMemoryUsersRepository();
+    statementsRepository = new InMemoryStatementsRepository();
+    getStatementOperationUseCase = new GetStatementOperationUseCase(
+      usersRepository,
+      statementsRepository
+    );
+
+    const user_response = await usersRepository.create({
+      email: user.email,
+      name: user.name,
+      password: user.password,
+    });
+
+    user.id = user_response.id ?? user.id;
+    first_statement.user_id = user.id;
+
+    const created_statement = await statementsRepository.create({
+      amount: first_statement.amount,
+      description: first_statement.description,
+      type: first_statement.type,
+      user_id: first_statement.user_id,
+    });
+
+    first_statement.id = created_statement.id ?? first_statement.id;
+  });
+
+  it("should not be able to return the statement if user is not found", async () => {
+    try {
+      await getStatementOperationUseCase.execute({
+        user_id: `not${user.id}`,
+        statement_id: first_statement.id,
+      });
+    } catch (e: any) {
+      expect(e).toBeInstanceOf(AppError);
+      expect(e.message).toBe("User not found");
+      expect(e.statusCode).toBe(404);
+    }
+  });
+
+  it("should not be able to return the statement if statement is not found", async () => {
+    try {
+      await getStatementOperationUseCase.execute({
+        user_id: user.id,
+        statement_id: `not${first_statement.id}`,
+      });
+    } catch (e: any) {
+      expect(e).toBeInstanceOf(AppError);
+      expect(e.message).toBe("Statement not found");
+      expect(e.statusCode).toBe(404);
+    }
+  });
+
+  it("should be able to return the statement if user and statement is found", async () => {
+    const statement = await getStatementOperationUseCase.execute({
+      user_id: user.id,
+      statement_id: first_statement.id,
+    });
+
+    expect(statement).toEqual(first_statement);
+  });
+});
