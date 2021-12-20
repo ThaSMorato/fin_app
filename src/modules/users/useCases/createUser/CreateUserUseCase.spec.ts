@@ -14,7 +14,13 @@ const user = {
   id: "",
 };
 
+const OLD_ENV = process.env;
+
 describe("#CreateUserUseCase", () => {
+  beforeAll(() => {
+    process.env.JWT_SECRET = "super_secret";
+  });
+
   beforeEach(async () => {
     usersRepository = new InMemoryUsersRepository();
     createUserUseCase = new CreateUserUseCase(usersRepository);
@@ -26,6 +32,10 @@ describe("#CreateUserUseCase", () => {
     });
 
     user.id = user_response.id ?? user.id;
+  });
+
+  afterAll(() => {
+    process.env = { ...OLD_ENV };
   });
 
   it("should not be able to create an user with the same email", async () => {
