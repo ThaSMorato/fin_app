@@ -8,6 +8,7 @@ import { AppError } from "../../../../shared/errors/AppError";
 enum OperationType {
   DEPOSIT = "deposit",
   WITHDRAW = "withdraw",
+  TRANSFER = "transfer",
 }
 
 let usersRepository: InMemoryUsersRepository;
